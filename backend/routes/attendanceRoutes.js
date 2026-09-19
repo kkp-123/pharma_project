@@ -15,18 +15,18 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 📍 Check-in / Check-out (Protected for all logged in employees/managers/admins)
+// Check-in / Check-out (Protected for all logged in employees/managers/admins)
 router.post("/check-in", protect, checkIn);
 router.post("/check-out", protect, checkOut);
 
-// ✍️ Manual Attendance Entry (HR Manager & Admin)
+// Manual Attendance Entry (HR Manager & Admin)
 router.post("/manual", protect, authorize("admin", "manager"), createManualAttendance);
 
-// 👤 View own attendance & today's status
+// View own attendance & today's status
 router.get("/my", protect, getMyAttendance);
 router.get("/today-status", protect, getMyTodayStatus);
 
-// 📊 Attendance dashboard summary
+// Attendance dashboard summary
 router.get(
   "/dashboard",
   protect,
@@ -34,7 +34,7 @@ router.get(
   getAttendanceDashboard
 );
 
-// 📋 All Attendance list
+// All Attendance list
 router.get(
   "/all",
   protect,
@@ -42,7 +42,7 @@ router.get(
   getAllAttendance
 );
 
-// 📄 Filtered & Paginated Attendance Report
+// Filtered & Paginated Attendance Report
 router.get(
   "/report",
   protect,
@@ -50,7 +50,7 @@ router.get(
   getAttendanceReport
 );
 
-// ✏️ Manual Attendance Override (Admin or HR Manager only)
+// Manual Attendance Override (Admin or HR Manager only)
 router.put(
   "/:id/override",
   protect,

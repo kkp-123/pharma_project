@@ -8,7 +8,7 @@ const batchSchema = new mongoose.Schema({
     required: true
   },
 
-  // 🔥 Link with production demand
+  // Link with production demand
   productionDemand: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "ProductionDemand"

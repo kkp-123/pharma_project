@@ -402,7 +402,7 @@ export const addPayment = async (req, res) => {
 
     sale.paidAmount = Number(sale.paidAmount || 0) + payAmount;
 
-    // ❗ IMPORTANT: DO NOT manually set dueAmount or status
+    // IMPORTANT: DO NOT manually set dueAmount or status
     // schema will handle everything in pre-save
 
     await sale.save();

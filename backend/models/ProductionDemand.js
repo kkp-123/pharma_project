@@ -30,7 +30,7 @@ const productionDemandSchema =
       ref: "User"
     },
 
-    // 🔥 ADD THESE
+    // ADD THESE
     assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User" 

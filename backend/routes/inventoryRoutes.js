@@ -15,19 +15,19 @@ import { checkDepartment } from "../middleware/departmentMiddleware.js";
 
 const router = express.Router();
 
-// 🟢 View inventory (all logged-in users)
+// View inventory (all logged-in users)
 router.get("/", protect, getInventory);
 router.get("/expiry", protect, getExpiryAlert);
 router.get("/low", protect, getLowStock);
 router.get("/:id", protect, getInventoryById);
 
-// 📦 Industrial Stock Adjustment (Stock In / Stock Out)
+// Industrial Stock Adjustment (Stock In / Stock Out)
 router.post("/adjust", protect, authorize("admin", "manager"), adjustStock);
 
-// ⚡ Auto-Generate Production Demand from Warehouse
+// Auto-Generate Production Demand from Warehouse
 router.post("/create-demand", protect, authorize("admin", "manager"), createDemandFromInventory);
 
-// 🔐 Update / Delete
+// Update / Delete
 router.put("/:id", protect, authorize("admin", "manager"), updateInventory);
 router.delete("/:id", protect, authorize("admin", "manager"), deleteInventory);
 

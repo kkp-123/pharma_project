@@ -12,7 +12,7 @@ const inventorySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Batch",
     required: true,
-    unique: true // 🔥 one batch = one inventory entry
+    unique: true // one batch = one inventory entry
   },
 
   quantity: {
@@ -21,13 +21,13 @@ const inventorySchema = new mongoose.Schema({
     min: 0
   },
 
-  // ⚠️ Optional (better move to Product model)
+  // Optional (better move to Product model)
   minStock: {
     type: Number,
     default: 100
   },
 
-  // ✅ FIXED: use Date instead of String
+  // FIXED: use Date instead of String
   expiryDate: {
     type: Date,
     required: true,
@@ -47,7 +47,7 @@ const inventorySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 //
-// 🔥 VALIDATION: expiry must be after manufacture
+// VALIDATION: expiry must be after manufacture
 //
 inventorySchema.pre("save", function () {
   if (this.expiryDate <= this.manufactureDate) {

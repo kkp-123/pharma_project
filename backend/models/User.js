@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    // 🔹 Basic Information
+    // Basic Information
     name: {
       type: String,
       required: true,
@@ -21,28 +21,28 @@ const userSchema = new mongoose.Schema(
       required: true
     },
 
-    // 🔹 Role (Admin / Manager / Employee)
+    // Role (Admin / Manager / Employee)
     role: {
       type: String,
       enum: ["admin", "manager", "employee"],
       default: "employee"
     },
 
-    // 🔹 Department
+    // Department
     department: {
       type: String,
       enum: ["QC", "Production", "Sales", "Inventory", "HR"],
       required: true
     },
 
-    // 🔹 Manager (for employee → links to manager)
+    // Manager (for employee → links to manager)
     manager: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null
     },
 
-    // 🔹 Contact Details
+    // Contact Details
     phone: {
       type: String
     },
@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema(
       default: 100 // ₹ per hour (you can change default)
     },
 
-    // 🔹 Job Details
+    // Job Details
     joiningDate: {
       type: Date,
       default: Date.now
@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema(
       default: 0
     },
 
-    // 🔹 Leave Balance
+    // Leave Balance
       leaveBalance: {
         casual: {
           type: Number,
@@ -83,13 +83,13 @@ const userSchema = new mongoose.Schema(
         }
       },
 
-    // 🔹 Account Status
+    // Account Status
     isActive: {
       type: Boolean,
       default: true
     },
 
-    // 🔹 Face Recognition Data
+    // Face Recognition Data
     faceData: {
       registered: {
         type: Boolean,

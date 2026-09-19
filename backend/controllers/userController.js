@@ -206,7 +206,7 @@ export const getEmployeesByDepartment = async (req, res) => {
 
 
 // ==========================================
-// 👤 FACE REGISTRATION & MANAGEMENT CONTROLLERS
+// FACE REGISTRATION & MANAGEMENT CONTROLLERS
 // ==========================================
 
 //

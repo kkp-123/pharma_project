@@ -9,7 +9,7 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🟢 Create Batch (Production Manager & Admin)
+// Create Batch (Production Manager & Admin)
 router.post(
   "/createBatch",
   protect,
@@ -29,12 +29,12 @@ router.post(
   createBatch
 );
 
-// 🔵 Get all batches
+// Get all batches
 router.get("/getBatch", protect, getBatches);
 router.get("/all", protect, getBatches);
 router.get("/", protect, getBatches);
 
-// 🟡 Update Batch Status
+// Update Batch Status
 router.put("/:id/status", protect, authorize("manager", "admin"), updateBatchStatus);
 
 export default router;

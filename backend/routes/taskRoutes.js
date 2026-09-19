@@ -10,7 +10,7 @@ import {
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-// ✅ CREATE TASK (Manager can assign to employee or department)
+// CREATE TASK (Manager can assign to employee or department)
 router.post("/", protect, authorize("manager"), createTask);
 
 router.get("/manager", protect, authorize("manager"), getManagerTasks);

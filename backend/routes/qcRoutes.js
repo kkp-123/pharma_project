@@ -6,7 +6,7 @@ import { checkDepartment } from "../middleware/departmentMiddleware.js";
 
 const router = express.Router();
 
-// 🟢 QC Check (Only QC Manager)
+// QC Check (Only QC Manager)
 router.post(
   "/check",
   protect,

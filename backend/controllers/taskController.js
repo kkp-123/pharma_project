@@ -73,7 +73,7 @@ export const getEmployeeTasks = async (req, res) => {
   try {
 
     const tasks = await Task.find({
-      employee: req.user._id   // ✅ only logged-in employee tasks
+      employee: req.user._id   // only logged-in employee tasks
     })
     .populate("manager", "name")
     .sort({ createdAt: -1 });

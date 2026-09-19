@@ -9,7 +9,7 @@ const sendNotification = async ({ user, message, type }) => {
       type
     });
 
-    // 🔥 FIX: convert ObjectId → string
+    // FIX: convert ObjectId → string
     const socketId = onlineUsers[user.toString()];
 
     console.log("📡 Sending to:", user.toString());

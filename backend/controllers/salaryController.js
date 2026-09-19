@@ -369,32 +369,63 @@ export const getMySalary = async (req, res) => {
 //
 export const getAllSalaries = async (req, res) => {
   try {
-    const { month, role, department, isPaid } = req.query;
+    const { month = new Date().toISOString().slice(0, 7), department, isPaid } = req.query;
 
-    let filter = {};
-    if (month) filter.month = month;
-    if (isPaid !== undefined && isPaid !== "ALL") {
-      filter.isPaid = isPaid === "true";
+    const userFilter = {
+      role: { $in: ["employee", "manager"] },
+      isActive: true
+    };
+    if (department && department !== "ALL") {
+      userFilter.department = department;
     }
 
-    let salaries = await Salary.find(filter)
-      .populate({
-        path: "employee",
-        match: {
-          isActive: true,
-          ...(role && role !== "ALL" && { role }),
-          ...(department && department !== "ALL" && { department })
-        },
-        select: "name email department role salary joiningDate"
-      })
-      .sort({ month: -1 });
+    const users = await User.find(userFilter).select("name email department role salary joiningDate isActive").sort({ name: 1 });
+    const salaryFilter = { month };
+    if (isPaid !== undefined && isPaid !== "ALL") {
+      salaryFilter.isPaid = isPaid === "true";
+    }
+    const salaries = await Salary.find(salaryFilter).populate("employee", "name email department role salary");
 
-    salaries = salaries.filter(s => s.employee);
+    let totalPayrollCost = 0;
+    let totalDisbursed = 0;
+    let totalPending = 0;
+    let generated = 0;
+    let paidCount = 0;
+
+    const roster = users.map((u) => {
+      const salaryRecord = salaries.find((s) => String(s.employee?._id || s.employee) === String(u._id));
+      const status = salaryRecord ? (salaryRecord.isPaid ? "PAID" : "GENERATED") : "NOT_GENERATED";
+
+      if (salaryRecord) {
+        generated++;
+        totalPayrollCost += salaryRecord.netSalary || salaryRecord.grossSalary || 0;
+        if (salaryRecord.isPaid) {
+          paidCount++;
+          totalDisbursed += salaryRecord.netSalary || 0;
+        } else {
+          totalPending += salaryRecord.netSalary || 0;
+        }
+      }
+
+      return {
+        user: u,
+        salaryRecord: salaryRecord || null,
+        status
+      };
+    });
 
     res.json({
       success: true,
-      count: salaries.length,
-      salaries
+      month,
+      stats: {
+        totalEmployees: users.length,
+        generated,
+        paidCount,
+        totalPayrollCost,
+        totalDisbursed,
+        totalPending
+      },
+      salaries: roster
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

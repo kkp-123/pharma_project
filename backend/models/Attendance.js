@@ -27,7 +27,7 @@ const attendanceSchema = new mongoose.Schema(
       default: "present"
     },
 
-    // 📍 Location fields
+    // Location fields
     location: {
       lat: Number,
       lng: Number
@@ -41,7 +41,7 @@ const attendanceSchema = new mongoose.Schema(
       lng: Number
     },
 
-    // 👤 Face Recognition & Verification
+    // Face Recognition & Verification
     faceVerified: {
       type: Boolean,
       default: false
@@ -56,7 +56,7 @@ const attendanceSchema = new mongoose.Schema(
       default: "location"
     },
 
-    // ⏱ Time & Work Metrics
+    // Time & Work Metrics
     lateMinutes: {
       type: Number,
       default: 0
@@ -87,7 +87,7 @@ const attendanceSchema = new mongoose.Schema(
       default: 0
     },
 
-    // 📝 Notes & Manual Override Audit
+    // Notes & Manual Override Audit
     notes: {
       type: String,
       default: ""

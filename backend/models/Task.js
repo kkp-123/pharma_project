@@ -63,7 +63,7 @@ const taskSchema = new mongoose.Schema(
       }
     ],
 
-    // 🔥 NEW: Comments
+    // NEW: Comments
     comments: [commentSchema],
 
     dueDate: Date

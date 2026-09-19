@@ -28,7 +28,7 @@ const salesItemSchema = new mongoose.Schema({
     type: Number
   },
 
-  // 🔥 ADD THIS
+  // ADD THIS
   batchAllocations: [
     {
       batch: {
@@ -96,7 +96,7 @@ const salesSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ ONLY FIX: safe number conversion (no logic change)
+// ONLY FIX: safe number conversion (no logic change)
 salesSchema.pre("save", function () {
 
   let total = 0;
@@ -110,7 +110,7 @@ salesSchema.pre("save", function () {
     item.total =
       qty * price * (1 - discount / 100);
 
-    // 🔥 NEW
+    // NEW
     item.remainingQuantity =
       qty - (item.allocatedQuantity || 0);
 

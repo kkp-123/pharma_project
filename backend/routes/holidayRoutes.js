@@ -10,7 +10,7 @@ import { checkDepartment } from "../middleware/departmentMiddleware.js";
 
 const router = express.Router();
 
-// 👑 Admin & HR Manager can manage holidays
+// Admin & HR Manager can manage holidays
 router.post(
   "/",
   protect,

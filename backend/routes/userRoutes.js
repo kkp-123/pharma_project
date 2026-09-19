@@ -15,7 +15,7 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🔐 User & Face Routes
+// User & Face Routes
 router.get("/", protect, authorize("admin", "manager"), getUsers);
 router.get("/department", protect, authorize("manager", "admin"), getEmployeesByDepartment);
 
