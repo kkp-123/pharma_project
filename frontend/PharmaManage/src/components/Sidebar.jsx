@@ -61,7 +61,7 @@ const Sidebar = ({ role, department, open = true }) => {
   //
   const menuConfig = {
     //
-    // 👑 ADMIN MENU (Full Company Access)
+    // ADMIN MENU (Full Company Access)
     //
     admin: [
       { section: "OVERVIEW" },
@@ -89,10 +89,10 @@ const Sidebar = ({ role, department, open = true }) => {
     ],
 
     //
-    // 🏢 DEPARTMENT MANAGERS
+    // DEPARTMENT MANAGERS
     //
     manager: {
-      // 🏭 Production Manager
+      // Production Manager
       Production: [
         { section: "DASHBOARD" },
         { name: "Production Dashboard", path: "/dashboard/manager", icon: icons.factory },
@@ -115,7 +115,7 @@ const Sidebar = ({ role, department, open = true }) => {
         { name: "My Bonus", path: "/dashboard/myBonus", icon: icons.bonus }
       ],
 
-      // 🔬 Quality Control (QC) Manager
+      // Quality Control (QC) Manager
       QC: [
         { section: "DASHBOARD" },
         { name: "QC Dashboard", path: "/dashboard/manager", icon: icons.qc },
@@ -136,7 +136,7 @@ const Sidebar = ({ role, department, open = true }) => {
         { name: "My Bonus", path: "/dashboard/myBonus", icon: icons.bonus }
       ],
 
-      // 👩‍💼 Human Resources (HR) Manager
+      // Human Resources (HR) Manager
       HR: [
         { section: "DASHBOARD" },
         { name: "HR Dashboard", path: "/dashboard/manager", icon: icons.users },
@@ -154,7 +154,7 @@ const Sidebar = ({ role, department, open = true }) => {
         { name: "My Bonus", path: "/dashboard/myBonus", icon: icons.bonus }
       ],
 
-      // 💼 Commercial Sales Manager
+      // Commercial Sales Manager
       Sales: [
         { section: "DASHBOARD" },
         { name: "Sales Dashboard", path: "/dashboard/sales", icon: icons.sales },
@@ -177,7 +177,7 @@ const Sidebar = ({ role, department, open = true }) => {
         { name: "My Bonus", path: "/dashboard/myBonus", icon: icons.bonus }
       ],
 
-      // 📦 Warehouse Inventory Manager
+      // Warehouse Inventory Manager
       Inventory: [
         { section: "DASHBOARD" },
         { name: "Inventory Dashboard", path: "/dashboard/admin/inventory", icon: icons.inventory },
@@ -197,7 +197,7 @@ const Sidebar = ({ role, department, open = true }) => {
     },
 
     //
-    // 👤 EMPLOYEES
+    // EMPLOYEES
     //
     employee: {
       Production: [

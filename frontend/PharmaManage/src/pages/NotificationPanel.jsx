@@ -18,7 +18,7 @@ const NotificationPanel = ({ open }) => {
     }
   };
 
-  // 🔹 Initial load
+  // Initial load
   useEffect(() => {
     fetchNotifications();
   }, []);

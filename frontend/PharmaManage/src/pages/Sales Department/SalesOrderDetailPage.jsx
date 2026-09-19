@@ -67,7 +67,7 @@ const SalesOrderDetails = () => {
     }
   };
 
-  // ⚡ Allocate Available Inventory Stock
+  // Allocate Available Inventory Stock
   const handleAllocateStock = async () => {
     try {
       setAllocating(true);

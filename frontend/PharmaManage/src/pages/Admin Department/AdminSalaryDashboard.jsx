@@ -56,7 +56,20 @@ const AdminSalaryDashboard = () => {
     try {
       setLoading(true);
       const res = await api.get(`/salary/all?month=${month}`);
-      setData(res.data);
+      const rawData = res.data || {};
+      
+      // If backend returned { success, month, stats, salaries }
+      if (rawData.salaries) {
+        setData(rawData);
+      } else if (Array.isArray(rawData)) {
+        setData({
+          month,
+          stats: { totalEmployees: rawData.length, generated: rawData.length, paidCount: 0, totalPayrollCost: 0, totalDisbursed: 0, totalPending: 0 },
+          salaries: rawData.map(s => ({ user: s.employee || s.user || s, salaryRecord: s, status: s.isPaid ? "PAID" : "GENERATED" }))
+        });
+      } else {
+        setData({ month, stats: {}, salaries: [] });
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load corporate salary ledger");
       setData({ month, stats: {}, salaries: [] });
@@ -71,19 +84,30 @@ const AdminSalaryDashboard = () => {
 
   // Open Preview / Recalculation Modal
   const handleOpenRecalc = async (empData) => {
-    setSelectedEmp(empData);
-    setCustomBonus(empData.salaryRecord?.bonus || 0);
-    setCustomOvertime(empData.salaryRecord?.overtime || 0);
-    setCustomTax(empData.salaryRecord?.tax || 0);
-    setCustomPF(empData.salaryRecord?.pf || null);
-    setCustomMethod(empData.salaryRecord?.paymentMethod || "bank_transfer");
-    setRecalcModalOpen(true);
-    await triggerPreview(empData.user._id, {
-      bonus: empData.salaryRecord?.bonus || 0,
-      overtime: empData.salaryRecord?.overtime || 0,
-      tax: empData.salaryRecord?.tax || 0,
-      pf: empData.salaryRecord?.pf || null
+    const userObj = empData.user || empData.employee || empData;
+    const salaryRec = empData.salaryRecord || (empData.basicPay !== undefined ? empData : null);
+
+    setSelectedEmp({
+      ...empData,
+      user: userObj,
+      salaryRecord: salaryRec
     });
+
+    setCustomBonus(salaryRec?.bonus || 0);
+    setCustomOvertime(salaryRec?.overtime || 0);
+    setCustomTax(salaryRec?.tax || 0);
+    setCustomPF(salaryRec?.pf !== undefined ? salaryRec.pf : null);
+    setCustomMethod(salaryRec?.paymentMethod || "bank_transfer");
+    setRecalcModalOpen(true);
+
+    if (userObj?._id) {
+      await triggerPreview(userObj._id, {
+        bonus: salaryRec?.bonus || 0,
+        overtime: salaryRec?.overtime || 0,
+        tax: salaryRec?.tax || 0,
+        pf: salaryRec?.pf !== undefined ? salaryRec.pf : null
+      });
+    }
   };
 
   // Trigger Real-Time Calculation Preview
@@ -96,9 +120,9 @@ const AdminSalaryDashboard = () => {
         bonus: overrides.bonus !== undefined ? overrides.bonus : customBonus,
         overtime: overrides.overtime !== undefined ? overrides.overtime : customOvertime,
         tax: overrides.tax !== undefined ? overrides.tax : customTax,
-        pf: overrides.pf !== undefined ? overrides.pf : customPF
+        pf: overrides.pf !== undefined && overrides.pf !== null ? overrides.pf : customPF
       });
-      setPreviewData(res.data.calculation);
+      setPreviewData(res.data?.data || res.data?.calculation || res.data);
     } catch (err) {
       toast.error("Failed to calculate pro-rata salary preview");
     } finally {
@@ -108,19 +132,20 @@ const AdminSalaryDashboard = () => {
 
   // Save / Disburse Single Salary
   const handleSaveSalary = async () => {
-    if (!selectedEmp) return;
+    const userObj = selectedEmp?.user || selectedEmp?.employee || selectedEmp;
+    if (!userObj?._id) return;
     try {
       setPreviewLoading(true);
       const res = await api.post("/salary/generate", {
-        employeeId: selectedEmp.user._id,
+        employeeId: userObj._id,
         month,
         bonus: Number(customBonus || 0),
         overtime: Number(customOvertime || 0),
         tax: Number(customTax || 0),
-        pf: customPF !== null ? Number(customPF) : undefined,
+        pf: customPF !== null && customPF !== undefined ? Number(customPF) : undefined,
         paymentMethod: customMethod
       });
-      toast.success(res.data.message || "Salary slip compiled successfully!");
+      toast.success(res.data?.message || "Salary slip compiled successfully!");
       setRecalcModalOpen(false);
       fetchSalaries();
     } catch (err) {
@@ -135,7 +160,7 @@ const AdminSalaryDashboard = () => {
     try {
       setGeneratingAll(true);
       const res = await api.post("/salary/generate-all", { month });
-      toast.success(res.data.message || `Payroll batch generated for ${month}`);
+      toast.success(res.data?.message || `Payroll batch generated for ${month}`);
       fetchSalaries();
     } catch (err) {
       toast.error(err.response?.data?.message || "Batch payroll generation failed");
@@ -146,6 +171,7 @@ const AdminSalaryDashboard = () => {
 
   // Disburse Single
   const handleMarkPaid = async (salaryId) => {
+    if (!salaryId) return;
     try {
       await api.put(`/salary/pay/${salaryId}`, { paymentMethod: "bank_transfer" });
       toast.success("Salary marked as Disbursed / Paid!");
@@ -161,7 +187,7 @@ const AdminSalaryDashboard = () => {
     try {
       setDisbursingAll(true);
       const res = await api.post("/salary/bulk-pay", { month, paymentMethod: "bank_transfer" });
-      toast.success(res.data.message || "Bulk payroll disbursed!");
+      toast.success(res.data?.message || "Bulk payroll disbursed!");
       fetchSalaries();
     } catch (err) {
       toast.error(err.response?.data?.message || "Bulk disbursement failed");
@@ -172,10 +198,15 @@ const AdminSalaryDashboard = () => {
 
   // Filter Salaries
   const filteredData = (data.salaries || []).filter((item) => {
-    if (department !== "ALL" && item.user.department !== department) return false;
+    if (!item) return false;
+    const userObj = item.user || item.employee || item;
+    if (department !== "ALL" && userObj.department !== department) return false;
     if (search) {
       const q = search.toLowerCase();
-      return item.user.name?.toLowerCase().includes(q) || item.user.email?.toLowerCase().includes(q);
+      return (
+        userObj.name?.toLowerCase().includes(q) ||
+        userObj.email?.toLowerCase().includes(q)
+      );
     }
     return true;
   });
@@ -307,121 +338,127 @@ const AdminSalaryDashboard = () => {
 
       {/* ROSTER GRID */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredData.map((item) => (
-          <motion.div
-            key={item.user._id}
-            whileHover={{ y: -6, transition: { duration: 0.2 } }}
-            className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col justify-between backdrop-blur-md"
-          >
-            <div>
-              {/* Card Top */}
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h2 className="text-base font-bold text-white">
-                    {item.user.name}
-                  </h2>
-                  <p className="text-slate-400 text-xs">{item.user.email}</p>
-                </div>
+        {filteredData.map((item, idx) => {
+          const userObj = item.user || item.employee || item;
+          const salaryRecord = item.salaryRecord || (item.basicPay !== undefined ? item : null);
+          const itemStatus = item.status || (salaryRecord?.isPaid ? "PAID" : salaryRecord ? "GENERATED" : "NOT_GENERATED");
 
-                <span
-                  className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
-                    item.status === "PAID"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                      : item.status === "GENERATED"
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                      : "bg-slate-800 text-slate-400 border-slate-700"
-                  }`}
-                >
-                  {item.status === "PAID" ? "✅ Disbursed" : item.status === "GENERATED" ? "⏳ In Review" : "⚠️ Not Compiled"}
-                </span>
-              </div>
-
-              {/* Tag Badges */}
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[10px] bg-slate-800 px-2.5 py-0.5 rounded-md text-slate-300">
-                  {item.user.department}
-                </span>
-                <span className="text-[10px] bg-indigo-950/60 border border-indigo-800/40 px-2.5 py-0.5 rounded-md text-indigo-300">
-                  Base CTC: ₹{(item.user.salary || 30000).toLocaleString()}
-                </span>
-              </div>
-
-              {/* Metrics Summary */}
-              {item.salaryRecord ? (
-                <div className="text-xs space-y-1.5 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 mb-4">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Basic Pay (50%):</span>
-                    <span>₹{item.salaryRecord.basicPay?.toLocaleString()}</span>
+          return (
+            <motion.div
+              key={userObj?._id || salaryRecord?._id || idx}
+              whileHover={{ y: -6, transition: { duration: 0.2 } }}
+              className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col justify-between backdrop-blur-md"
+            >
+              <div>
+                {/* Card Top */}
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-base font-bold text-white">
+                      {userObj?.name || "Employee"}
+                    </h2>
+                    <p className="text-slate-400 text-xs">{userObj?.email || ""}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">HRA + Allowances:</span>
-                    <span>₹{((item.salaryRecord.hra || 0) + (item.salaryRecord.specialAllowance || 0))?.toLocaleString()}</span>
-                  </div>
-                  {item.salaryRecord.bonus > 0 && (
-                    <div className="flex justify-between text-emerald-400">
-                      <span>Performance Bonus:</span>
-                      <span>+₹{item.salaryRecord.bonus?.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {item.salaryRecord.attendanceDeduction > 0 && (
-                    <div className="flex justify-between text-rose-400">
-                      <span>Attendance Deduction:</span>
-                      <span>-₹{item.salaryRecord.attendanceDeduction?.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {item.salaryRecord.pf > 0 && (
-                    <div className="flex justify-between text-rose-400">
-                      <span>PF (12%):</span>
-                      <span>-₹{item.salaryRecord.pf?.toLocaleString()}</span>
-                    </div>
-                  )}
 
-                  <div className="flex justify-between pt-2 border-t border-slate-800 font-bold text-sm">
-                    <span className="text-white">Net Take-Home:</span>
-                    <span className="text-emerald-400 text-base">₹{item.salaryRecord.netSalary?.toLocaleString()}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800/50 mb-4 text-center text-xs text-slate-500">
-                  Real-time payroll calculation awaiting compilation.
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleOpenRecalc(item)}
-                  className="flex-1 bg-slate-800 hover:bg-slate-700 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition border border-slate-700"
-                >
-                  <Edit size={13} className="text-indigo-400" />
-                  {item.salaryRecord ? "Recalculate / Adjust" : "Calculate & Preview"}
-                </button>
-
-                {item.salaryRecord && (
-                  <button
-                    onClick={() => generatePayslipPDF(item.salaryRecord, item.user)}
-                    className="px-3 bg-slate-800 hover:bg-slate-700 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 border border-slate-700 text-emerald-400 transition"
-                    title="Download Official PDF Payslip"
+                  <span
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                      itemStatus === "PAID"
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                        : itemStatus === "GENERATED"
+                        ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                        : "bg-slate-800 text-slate-400 border-slate-700"
+                    }`}
                   >
-                    <Download size={14} />
-                  </button>
+                    {itemStatus === "PAID" ? "✅ Disbursed" : itemStatus === "GENERATED" ? "⏳ In Review" : "⚠️ Not Compiled"}
+                  </span>
+                </div>
+
+                {/* Tag Badges */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-[10px] bg-slate-800 px-2.5 py-0.5 rounded-md text-slate-300">
+                    {userObj?.department || "General"}
+                  </span>
+                  <span className="text-[10px] bg-indigo-950/60 border border-indigo-800/40 px-2.5 py-0.5 rounded-md text-indigo-300">
+                    Base CTC: ₹{(userObj?.salary || 30000).toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Metrics Summary */}
+                {salaryRecord ? (
+                  <div className="text-xs space-y-1.5 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Basic Pay (50%):</span>
+                      <span>₹{(salaryRecord.basicPay || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">HRA + Allowances:</span>
+                      <span>₹{((salaryRecord.hra || 0) + (salaryRecord.specialAllowance || 0)).toLocaleString()}</span>
+                    </div>
+                    {salaryRecord.bonus > 0 && (
+                      <div className="flex justify-between text-emerald-400">
+                        <span>Performance Bonus:</span>
+                        <span>+₹{salaryRecord.bonus.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {salaryRecord.attendanceDeduction > 0 && (
+                      <div className="flex justify-between text-rose-400">
+                        <span>Attendance Deduction:</span>
+                        <span>-₹{salaryRecord.attendanceDeduction.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {salaryRecord.pf > 0 && (
+                      <div className="flex justify-between text-rose-400">
+                        <span>PF (12%):</span>
+                        <span>-₹{salaryRecord.pf.toLocaleString()}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between pt-2 border-t border-slate-800 font-bold text-sm">
+                      <span className="text-white">Net Take-Home:</span>
+                      <span className="text-emerald-400 text-base">₹{(salaryRecord.netSalary || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800/50 mb-4 text-center text-xs text-slate-500">
+                    Real-time payroll calculation awaiting compilation.
+                  </div>
                 )}
               </div>
 
-              {item.salaryRecord && !item.salaryRecord.isPaid && (
-                <button
-                  onClick={() => handleMarkPaid(item.salaryRecord._id)}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/50 transition"
-                >
-                  <Send size={13} />
-                  Disburse & Mark as Paid
-                </button>
-              )}
-            </div>
-          </motion.div>
-        ))}
+              {/* Actions */}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleOpenRecalc(item)}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition border border-slate-700"
+                  >
+                    <Edit size={13} className="text-indigo-400" />
+                    {salaryRecord ? "Recalculate / Adjust" : "Calculate & Preview"}
+                  </button>
+
+                  {salaryRecord && (
+                    <button
+                      onClick={() => generatePayslipPDF(salaryRecord, userObj)}
+                      className="px-3 bg-slate-800 hover:bg-slate-700 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 border border-slate-700 text-emerald-400 transition"
+                      title="Download Official PDF Payslip"
+                    >
+                      <Download size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {salaryRecord && !salaryRecord.isPaid && (
+                  <button
+                    onClick={() => handleMarkPaid(salaryRecord._id)}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/50 transition"
+                  >
+                    <Send size={13} />
+                    Disburse & Mark as Paid
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* RECALCULATION & REAL-TIME PREVIEW MODAL */}
@@ -442,7 +479,7 @@ const AdminSalaryDashboard = () => {
                     Salary Adjustments & Real-Time CTC Breakdown
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {selectedEmp.user.name} ({selectedEmp.user.department}) • Month: {month}
+                    {selectedEmp.user?.name || "Employee"} ({selectedEmp.user?.department || "General"}) • Month: {month}
                   </p>
                 </div>
                 <button onClick={() => setRecalcModalOpen(false)} className="text-slate-400 hover:text-white">
@@ -457,19 +494,19 @@ const AdminSalaryDashboard = () => {
                   <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 grid grid-cols-4 gap-2 text-center text-xs">
                     <div>
                       <p className="text-slate-500">Working Days</p>
-                      <p className="font-bold text-white text-sm mt-0.5">{previewData.workingDays}</p>
+                      <p className="font-bold text-white text-sm mt-0.5">{previewData.workingDays || 26}</p>
                     </div>
                     <div>
                       <p className="text-emerald-400">Present Days</p>
-                      <p className="font-bold text-emerald-400 text-sm mt-0.5">{previewData.presentDays}</p>
+                      <p className="font-bold text-emerald-400 text-sm mt-0.5">{previewData.presentDays || 0}</p>
                     </div>
                     <div>
                       <p className="text-rose-400">Absent Days</p>
-                      <p className="font-bold text-rose-400 text-sm mt-0.5">{previewData.absentDays}</p>
+                      <p className="font-bold text-rose-400 text-sm mt-0.5">{previewData.absentDays || 0}</p>
                     </div>
                     <div>
                       <p className="text-amber-400">Overtime Hrs</p>
-                      <p className="font-bold text-amber-400 text-sm mt-0.5">{previewData.overtimeHours}h</p>
+                      <p className="font-bold text-amber-400 text-sm mt-0.5">{previewData.overtimeHours || 0}h</p>
                     </div>
                   </div>
                 )}
@@ -483,7 +520,9 @@ const AdminSalaryDashboard = () => {
                       value={customBonus}
                       onChange={(e) => {
                         setCustomBonus(Number(e.target.value));
-                        triggerPreview(selectedEmp.user._id, { bonus: Number(e.target.value) });
+                        if (selectedEmp.user?._id) {
+                          triggerPreview(selectedEmp.user._id, { bonus: Number(e.target.value) });
+                        }
                       }}
                       className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                     />
@@ -496,7 +535,9 @@ const AdminSalaryDashboard = () => {
                       value={customOvertime}
                       onChange={(e) => {
                         setCustomOvertime(Number(e.target.value));
-                        triggerPreview(selectedEmp.user._id, { overtime: Number(e.target.value) });
+                        if (selectedEmp.user?._id) {
+                          triggerPreview(selectedEmp.user._id, { overtime: Number(e.target.value) });
+                        }
                       }}
                       className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                     />
@@ -509,7 +550,9 @@ const AdminSalaryDashboard = () => {
                       value={customTax}
                       onChange={(e) => {
                         setCustomTax(Number(e.target.value));
-                        triggerPreview(selectedEmp.user._id, { tax: Number(e.target.value) });
+                        if (selectedEmp.user?._id) {
+                          triggerPreview(selectedEmp.user._id, { tax: Number(e.target.value) });
+                        }
                       }}
                       className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                     />
@@ -536,40 +579,40 @@ const AdminSalaryDashboard = () => {
                     <h4 className="font-bold text-white text-sm mb-3">Live Compensation CTC Breakdown</h4>
                     <div className="flex justify-between text-slate-400">
                       <span>Gross CTC:</span>
-                      <span className="text-white font-semibold">₹{previewData.grossSalary?.toLocaleString()}</span>
+                      <span className="text-white font-semibold">₹{(previewData.grossSalary || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-slate-400">
                       <span>Basic Pay:</span>
-                      <span>₹{previewData.basicPay?.toLocaleString()}</span>
+                      <span>₹{(previewData.basicPay || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-slate-400">
                       <span>House Rent Allowance (HRA):</span>
-                      <span>₹{previewData.hra?.toLocaleString()}</span>
+                      <span>₹{(previewData.hra || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-slate-400">
                       <span>Dearness Allowance (DA):</span>
-                      <span>₹{previewData.da?.toLocaleString()}</span>
+                      <span>₹{(previewData.da || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-slate-400">
                       <span>Special Allowances:</span>
-                      <span>₹{previewData.specialAllowance?.toLocaleString()}</span>
+                      <span>₹{(previewData.specialAllowance || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-rose-400">
                       <span>Attendance Deduction:</span>
-                      <span>-₹{previewData.attendanceDeduction?.toLocaleString()}</span>
+                      <span>-₹{(previewData.attendanceDeduction || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-rose-400">
                       <span>Provident Fund (12%):</span>
-                      <span>-₹{previewData.pf?.toLocaleString()}</span>
+                      <span>-₹{(previewData.pf || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-rose-400">
                       <span>Tax (TDS):</span>
-                      <span>-₹{previewData.tax?.toLocaleString()}</span>
+                      <span>-₹{(previewData.tax || 0).toLocaleString()}</span>
                     </div>
 
                     <div className="flex justify-between pt-3 border-t border-slate-800 text-base font-extrabold text-white">
                       <span>Net Disbursable Take-Home:</span>
-                      <span className="text-emerald-400">₹{previewData.netSalary?.toLocaleString()}</span>
+                      <span className="text-emerald-400">₹{(previewData.netSalary || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 )}

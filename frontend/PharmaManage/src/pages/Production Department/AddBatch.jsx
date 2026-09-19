@@ -50,7 +50,7 @@ const AddBatch = () => {
     });
   };
 
-  // 🚀 Submit
+  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 

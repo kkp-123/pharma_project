@@ -23,7 +23,7 @@ const HolidayManagement = () => {
     fetchHolidays();
   }, []);
 
-  // ➕ Add Holiday
+  // Add Holiday
   const handleAdd = async () => {
     try {
       await api.post("/holidays", form);

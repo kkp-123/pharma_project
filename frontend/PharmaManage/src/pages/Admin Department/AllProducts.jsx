@@ -178,7 +178,7 @@ const ProductList = () => {
 
               </div>
 
-              {/* 🔥 ACTION BUTTONS */}
+              {/* ACTION BUTTONS */}
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => openEdit(product)}

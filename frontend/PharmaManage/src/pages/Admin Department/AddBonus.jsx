@@ -22,7 +22,7 @@ const AddBonus = () => {
   const fetchEmployees = async () => {
     try {
 
-      const { data } = await api.get("/users?role=employee");
+      const { data } = await api.get("/users");
       setEmployees(data?.users || (Array.isArray(data) ? data : []));
     } catch (error) {
       console.log(error);
